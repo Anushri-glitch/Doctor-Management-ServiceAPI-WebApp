@@ -65,4 +65,9 @@ public class PatientController {
 
         return new ResponseEntity<Void>(status);
     }
+
+    @GetMapping(value = "symptom")
+    public Doctor getDoctorBySymptom(@PathVariable Long patientId){
+        return patientService.getDoctorBySymptom(patientId);
+    }
 }

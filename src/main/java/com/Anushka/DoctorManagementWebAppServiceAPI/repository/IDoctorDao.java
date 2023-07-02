@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface IDoctorDao extends JpaRepository<Doctor,Long> {
     Doctor findByDoctorId(Long docId);
+
+    Doctor getDoctorBySpecialization(String orthopedic);
 }

@@ -5,8 +5,10 @@ import com.Anushka.DoctorManagementWebAppServiceAPI.dto.SignInOutput;
 import com.Anushka.DoctorManagementWebAppServiceAPI.dto.SignUpInput;
 import com.Anushka.DoctorManagementWebAppServiceAPI.dto.SignUpOutput;
 import com.Anushka.DoctorManagementWebAppServiceAPI.model.*;
+import com.Anushka.DoctorManagementWebAppServiceAPI.repository.IDoctorDao;
 import com.Anushka.DoctorManagementWebAppServiceAPI.repository.IPatientDao;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import javax.xml.bind.DatatypeConverter;
@@ -29,6 +31,9 @@ public class PatientService {
 
     @Autowired
     DoctorService doctorService;
+
+    @Autowired
+    IDoctorDao doctorDao;
 
     public SignUpOutput signUp(SignUpInput signUpDto) {
         Patient patient = patientDao.findByPatientEmail(signUpDto.getPassword());
@@ -108,5 +113,45 @@ public class PatientService {
 
     public void removeAppointment(AppointmentKey appointKey) {
         appointmentService.removeAppointment(appointKey);
+    }
+
+    public Doctor getDoctorBySymptom(Long patientId) {
+
+        Patient patient = patientDao.findById(patientId).get();
+        if(patient == null){
+            throw new IllegalStateException("Patient not Exists!!!");
+        }
+        String city = patient.getCity();
+        if(!city.equals("Delhi") || !city.equals("Noida") || !city.equals("Faridabad")){
+            throw new IllegalStateException("We are still waiting to explore to your Location!!");
+        }
+
+        //Doctor docs = new Doctor();
+        String s = patient.getSymptom();
+        if(s.equals("Arthritis") || s.equals("Back Pain") || s.equals("Tissue Injuries")){
+            Doctor doc1 = doctorDao.getDoctorBySpecialization("ORTHOPEDIC");
+            if(doc1 != null){
+                return doc1;
+            }
+        }
+        else if(s.equalsIgnoreCase("Dysmenorrhea")){
+            Doctor doc2 = doctorDao.getDoctorBySpecialization("GYNECOLOGY");
+            if(doc2 != null){
+                return doc2;
+            }
+        }
+        else if(s.equalsIgnoreCase("Skin Infection") || s.equalsIgnoreCase("Skin burn")){
+            Doctor doc3 = doctorDao.getDoctorBySpecialization("DERMATOLOGY");
+            if(doc3 != null){
+                return doc3;
+            }
+        }
+        else if(s.equalsIgnoreCase("Ear pain")){
+            Doctor doc4 = doctorDao.getDoctorBySpecialization("ENT");
+            if(doc4 != null){
+                return doc4;
+            }
+        }
+        throw new IllegalStateException("There isn't any doctor present at your location for your symptom");
     }
 }

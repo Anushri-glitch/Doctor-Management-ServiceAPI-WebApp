@@ -14,4 +14,8 @@ public class AppointmentService {
     public void removeAppointment(AppointmentKey appointKey) {
         appointmentDao.deleteById(appointKey);
     }
+
+    public void BookAppointment(Appointment appointment) {
+        appointmentDao.save(appointment);
+    }
 }
