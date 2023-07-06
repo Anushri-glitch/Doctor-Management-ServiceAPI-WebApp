@@ -20,118 +20,150 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## :three: Dataflow (Functions Used In)
 ### :purple_square: 1. Model - Model is used to Iniitialize the required attributes and create the accessable constructors and methods
-#### :o: Employee.java
+#### :o: Doctor.java
 ```java
 @Entity
 @Table
-public class Employee {
+public class Doctor {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Integer employeeId;
-    private String employeeName;
-    private String employeePhone;
-    private String employeeEmail;
-    private String jobRole;
-    private Integer salary;
-    private Integer Age;
-    private String password;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long doctorId;
+
+    private String doctorName;
+
+    @Enumerated(EnumType.STRING)
+    private City city;
+    private String email;
+    private String phone;
+
+    @Enumerated(EnumType.STRING)
+    private Specialization specialization;
+
+    @OneToMany(mappedBy = "doctor")
+    private List<Appointment> appointments;
+
+}
 ```
 
-#### :o: Hr.java
+#### :o: Patience.java
 ```java
-public class Hr {
+public class Patient {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Integer hrId;
-    private String hrName;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long patientId;
 
-    @Pattern(regexp = "^[a-z0-9]{3,}@[admin]{3,5}[.]{1}[com]{1,3}$")
-    private String hrEmail;
-    private String hrPassword;
+    @Pattern(regexp = "^[A-Za-z]{3,}$")
+    private String patientName;
+
+    @Pattern(regexp = "^[A-Za-z]{1,20}$")
+    private String city;
     private Integer age;
-    private String hrPhone;
+    @Column(nullable = false, unique = true)
 
-    @OneToMany
-    private List<Employee> employeeList = new ArrayList<>();
+    private String patientEmail;
+    @Column(nullable = false)
+    private String patientPassword;
+
+    @Pattern(regexp = "^[0-9]{10}$")
+    private String patientContact;
+
+    private String symptom;
+}
 ```
 
-#### :o: AuthTokenEmployee.java
+#### :o: AuthToken.java
 ```java
-public class AuthTokenUser {
+public class AuthToken {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long tokenId;
-
     private String token;
     private LocalDate tokenCreationDate;
 
     @OneToOne
-    @JoinColumn(nullable = false, name = "fk_employee_Id")
-    private Employee employee;
+    @JoinColumn(nullable = false, name = "fk_patient_ID")
+    private Patient patient;
+
+    public AuthToken(Patient patient) {
+        this.patient = patient;
+        this.tokenCreationDate = LocalDate.now();
+        this.token = UUID.randomUUID().toString();
+    }
 }
 ```
 
-#### :o: AuthTokenHr.java
+#### :o: City.java
 ```java
-public class AuthTokenHr {
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Long adminTokenId;
+public enum City {
+    Delhi,
+    Noida,
+    Faridabad
+}
+```
 
-    private String adminToken;
-    private LocalDate adminTokenCreationDate;
+#### :o: Specialization.java
+```java
+public enum Specialization {
+    ENT,
+    ORTHOPEDIC,
+    GYNECOLOGY,
+    DERMATOLOGY
+
+}
+```
+
+#### :o: Appointment.java
+```java
+public class Appointment {
+
+    @Id
+    @EmbeddedId
+    private AppointmentKey id;
+
+    @ManyToOne
+    @JoinColumn(name = "fk_doctor_doc_id")
+    private Doctor doctor;
 
     @OneToOne
-    @JoinColumn(nullable = false, name = "fk_Hr_Id")
-    private Hr hr;
+    private Patient patient;
 }
 ```
 
-#### :o: Rep.java
+#### :o: AppointmentKey.java
 ```java
-@Entity
-@Table
-public class Rep {
+@Embeddable
+public class AppointmentKey implements Serializable {//serializable - bytes
 
-    @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private Integer reportId;
-    private Integer attendence;
-    private String performance;
-    private String name;
+    public Long appId;
+    public LocalDateTime time;
 
 }
 ```
 
 ##### To See Model
-:white_check_mark: [EmployeeManagement-Model](https://github.com/Anushri-glitch/Employee-Management-WebApp/tree/master/src/main/java/com/Anushka/EmployeeManagementWebApp/model)
+:white_check_mark: [DoctorManagement-Model](https://github.com/Anushri-glitch/Doctor-Management-ServiceAPI-WebApp/tree/master/src/main/java/com/Anushka/DoctorManagementWebAppServiceAPI/model)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### :purple_square: 2. Service - This Layer is used to write the logic of our CRUD operaions.
-#### :o: EmployeeService.java
+#### :o: DoctorService.java
 ```java
 @Service
-public class UserService {
+public class DoctorService {
 
     @Autowired
-    IEmployeeDao employeeDao;
+    IDoctorDao doctorDao;
 
-    @Autowired
-    IHrDao hrDao;
-
-    @Autowired
-    AuthService authService;
-
-    public SignUpOutput SignUp(SignUpInput signUpDto) {
-
-        //Check If the Employee Exists or not based on Employee's Email
-        User user = userDao.findFirstByUserEmail(signUpDto.getEmail());
-
-        if(employee != null){
-            throw new IllegalStateException("Employee Already Registered!!");
+    public String addDoctor(Doctor doc) {
+        Doctor newDoc = doctorDao.findById(doc.getDoctorId()).get();
+        if(newDoc != null){
+            throw new IllegalStateException("Doctor already Exist...");
         }
+        doctorDao.save(doc);
+        return "Dr. " + doc.getDoctorName() + " Is Added";
+    }
 }
 ```
 
@@ -141,170 +173,148 @@ public class UserService {
 public class AuthService {
 
     @Autowired
-    IAuthEmployeeDao authEmployeeDao;
+    IAuthTokenDao authTokenDao;
 
     @Autowired
-    IAuthHrDao authHrDao;
+    IPatientDao patientDao;
 
-    //Save Token For User
-    public void saveToken(AuthTokenEmployee token) {
-        authEmployeeDao.save(token);
+    public void saveToken(AuthToken token) {
+        authTokenDao.save(token);
     }
 }
 ```
 
-#### :o: HrService.java
+#### :o: PatientService.java
 ```java
 @Service
-public class HrService {
+public class PatientService {
 
     @Autowired
-    IHrDao hrDao;
+    IPatientDao patientDao;
+
+    @Autowired
+    IDoctorDao doctorDao;
+
+    public SignUpOutput signUp(SignUpInput signUpDto) {
+        Patient patient = patientDao.findByPatientEmail(signUpDto.getPassword());
+        if(patient != null){
+            throw new IllegalStateException("Patient already Exists!!!");
+        }
+        return new SignUpOutput("Patient Registered as " + patient.getPatientName(), "Patient Created Successfully");
+    }
+}
+```
+
+#### :o: AppointmentService.java
+```java
+@Service
+public class AppointmentService {
+    @Autowired
+    IAppointmentDao appointmentDao;
+
+    public void removeAppointment(AppointmentKey appointKey) {
+        appointmentDao.deleteById(appointKey);
+    }
+}
+```
+
+#### To See Service
+:white_check_mark: [DoctorManagement-Service](https://github.com/Anushri-glitch/Doctor-Management-ServiceAPI-WebApp/tree/master/src/main/java/com/Anushka/DoctorManagementWebAppServiceAPI/service)
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+### :purple_square: 3. Controller - This Controller is used to like UI between Model and Service and also for CRUD Mappings.
+#### :o: DoctorController.java
+```java
+@RestController
+@RequestMapping(value = "/doctor")
+public class DoctorController {
+
+    @Autowired
+    DoctorService doctorService;
+
+    @PostMapping()
+    public String addDoctor(@RequestBody Doctor doc){
+        return doctorService.addDoctor(doc);
+    }
+}
+```
+
+#### :o: PatientController.java
+```java
+@RestController
+@RequestMapping(value = "/Patient")
+public class PatientController {
+
+    @Autowired
+    PatientService patientService;
 
     @Autowired
     AuthService authService;
 
-    @Autowired
-    IEmployeeDao employeeDao;
-
-    public SignUpOutput signUp(signUpHrInput signUpDto) {
-        //Check Employee is Registered or not
-         Hr hr = hrDao.findFirstByHrEmail(signUpDto.getEmail());
-
-        if(hr != null){
-            throw new IllegalStateException("Hr Already Registered!!!");
-        }
-        return new SignUpOutput("Hr registered as - "+ hr.getHrName() , " Hr Created Successfully!!!");
-    }
-```
-
-#### :o: RepService.java
-```java
-@Service
-public class RepService {
-
-
-    @Autowired
-    IEmployeeDao employeeDao;
-
-    @Autowired
-    IReportingDao reportingDao;
-
-    @Autowired
-    IHrDao hrDao;
-
-    public String addAttendence(String empEmail) {
-
-        int newAttendence =0;
-
-        //Check that This Employee is existing or not
-        Employee employee = employeeDao.findFirstByEmployeeEmail(empEmail);
-        if(employee == null){
-            throw new IllegalStateException("Employee is Invalid !!...");
-        }
-       
-        //Final Save In Repo
-        reportingDao.save(rep);
-
-        return "Your Attendence is Marked !! Thank You " + employee.getEmployeeName();
-    }
-```
-
-#### To See Service
-:white_check_mark: [EmployeeManagement-Service](https://github.com/Anushri-glitch/Employee-Management-WebApp/tree/master/src/main/java/com/Anushka/EmployeeManagementWebApp/service)
-----------------------------------------------------------------------------------------------------------------------------------------------------
-
-### :purple_square: 3. Controller - This Controller is used to like UI between Model and Service and also for CRUD Mappings.
-#### :o: EmployeeController.java
-```java
-@RestController
-public class EmployeeController {
-
-    @Autowired
-    EmployeeService employeeService;
-
-    //Create Employee
-    @PostMapping(value = "/SignUp/HrEmail/{HrEmail}")
-    public SignUpOutput SignUp(@RequestBody SignUpInput signUpDto, @PathVariable String HrEmail){
-        return employeeService.SignUp(signUpDto, HrEmail);
+    @PostMapping(value = "/signUp")
+    public SignUpOutput signUp(@RequestBody SignUpInput signUpDto){
+        return patientService.signUp(signUpDto);
     }
 }
 ```
 
-#### :o: HrController.java
+#### :o: AppointmentController.java
 ```java
 @RestController
-public class HrController {
+public class AppointmentController {
 
     @Autowired
-    HrService hrService;
+    AppointmentService appointmentService;
 
-    @PostMapping(value = "/HrSignUp")
-    public SignUpOutput SignUpHr(@RequestBody signUpHrInput signUpDto){
-        return hrService.signUp(signUpDto);
-    }
-}
-```
-
-#### :o: RepController.java
-```java
-@RestController
-public class RepController {
-
-    RepService repService;
-
-    @PostMapping(value = "Rep/{empEmail}")
-    public String createAttendence(@PathVariable String empEmail){
-        return repService.addAttendence(empEmail);
+    @PostMapping(value = "bookAppointment")
+    public void bookAppointment(@RequestBody Appointment appointment){
+        appointmentService.BookAppointment(appointment);
     }
 }
 ```
 
 #### To See the Controller
-:white_check_mark: [EmployeeManagement-Controller](https://github.com/Anushri-glitch/Employee-Management-WebApp/tree/master/src/main/java/com/Anushka/EmployeeManagementWebApp/controller)
+:white_check_mark: [DoctorManagement-Controller](https://github.com/Anushri-glitch/Doctor-Management-ServiceAPI-WebApp/tree/master/src/main/java/com/Anushka/DoctorManagementWebAppServiceAPI/controller)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ### :purple_square: 3. Repository: data access object (DAO) is an object that provides an abstract interface to some type of database or other persistence mechanisms.
 
-#### :o: IEmployeeDao.java
+#### :o: IDoctorDao.java
 ```java
 @Repository
-public interface IEmployeeDao  extends JpaRepository<Employee, Integer> {
-    User findFirstByUserEmail(String email);
+public interface IDoctorDao extends JpaRepository<Doctor,Long> {
+    Doctor findByDoctorId(Long docId);
+
+    Doctor getDoctorBySpecialization(String orthopedic);
 }
 ```
-#### :o: IHrDao.java
+#### :o: IPatientDao.java
 ```java
 @Repository
-public interface IHrDao extends JpaRepository<Hr, Integer> {
-    Hr findFirstByHrEmail(String hrEmail);
+public interface IPatientDao extends JpaRepository<Patient,Long> {
+    Patient findByPatientEmail(String patientEmail);
 }
 ```
 
-#### :o: IAuthEmployeeDao.java
+#### :o: IAuthTokenDao.java
 ```java
 @Repository
-public interface IAuthEmployeeDao extends JpaRepository<AuthTokenEmployee,Integer> {
-   AuthTokenEmployee findByEmployee(Employee employee);
+public interface IAuthTokenDao extends JpaRepository<AuthToken,Long> {
+    AuthToken findFirstByToken(Patient patient);
+
+    AuthToken findFirstByToken(String token);
 }
 ```
 
-#### :o: IAuthHrDao.java
+#### :o: IAppointmentDao.java
 ```java
 @Repository
-public interface IAuthHrDao extends JpaRepository<AuthTokenHr,Integer> {
-    AuthTokenHr findByHr(Hr hr);
-}
-```
-
-#### :o: IRepDao.java
-```java
-@Repository
-public interface IRepDao extends JpaRepository<Rep,Integer> {
+public interface IAppointmentDao extends JpaRepository<Appointment, AppointmentKey> {
+    Appointment findFirstById(AppointmentKey appointKey);
 }
 ```
 
 #### To See The Repository
-:white_check_mark: [EmployeeManagement-DAO](https://github.com/Anushri-glitch/Employee-Management-WebApp/tree/master/src/main/java/com/Anushka/EmployeeManagementWebApp/repository)
+:white_check_mark: [DoctorManagement-DAO](https://github.com/Anushri-glitch/Doctor-Management-ServiceAPI-WebApp/tree/master/src/main/java/com/Anushka/DoctorManagementWebAppServiceAPI/repository)
 -------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### :purple_square: 3. DTO : Use This to do SignUp and SignIn for the User
@@ -317,12 +327,12 @@ public interface IRepDao extends JpaRepository<Rep,Integer> {
 public class SignUpInput {
     private String firstName;
     private String lastName;
+    private String city;
     private Integer age;
     private String email;
     private String password;
-    private String jobRole;
-    private Integer salary;
     private String contact;
+    private String symptom;
 }
 ```
 
@@ -346,9 +356,8 @@ public class SignUpOutput {
 @AllArgsConstructor
 @NoArgsConstructor
 public class SignInInput {
-
-    private String signInMail;
-    private String signInPassword;
+    private String patientEmail;
+    private String patientPassword;
 }
 ```
 
@@ -364,23 +373,9 @@ public class SignInOutput {
     private String token;
 }
 ```
-#### :o: SignUpHrInput.java
-
-```java
-@Data
-@NoArgsConstructor
-public class signUpHrInput {
-    private String firstName;
-    private String lastName;
-    private Integer age;
-    private String email;
-    private String password;
-    private String contact;
-}
-```
 
 ##### To See The DTO
-:white_check_mark: [EmployeeManagement-DTO](https://github.com/Anushri-glitch/Employee-Management-WebApp/tree/master/src/main/java/com/Anushka/EmployeeManagementWebApp/dto)
+:white_check_mark: [DoctorManagement-DTO](https://github.com/Anushri-glitch/Doctor-Management-ServiceAPI-WebApp/tree/master/src/main/java/com/Anushka/DoctorManagementWebAppServiceAPI/dto)
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## :four: DataStructures Used in Project
@@ -390,12 +385,12 @@ public class signUpHrInput {
 -------------------------------------------------------------------------------------------------------------------------------------------------------
 ## :five: DataBase Response In project
 
-:arrow_right: Employee table
+:arrow_right: Patient table
 
 ```sql
-  select * from employee;
+  select * from patient;
 +------------+---------------------+-------------------+----------------------------------+----------------+
-| emloyee_id | employee_email      | employee_name     | employee_password                | employee_phone |
+| patient_id | patient_email       | patient_name      | patient_password                 | patient_phone  |
 +------------+---------------------+-------------------+----------------------------------+----------------+
 |       1    | Anushka12@gmail.com | AnushkaSrivastava | 1C6B2A130FD59CE767D50D0598E9F4D1 | 1234567890     |
 |       2    | Pankaj@gmail.com    | PankajBhartiya    | A6E49C7BACFCCB95D75464C4AB82422D | 1234567890     |
@@ -403,68 +398,36 @@ public class signUpHrInput {
 +------------+---------------------+-------------------+----------------------------------+----------------+
 ```
 
-:arrow_right: Hr Table
+:arrow_right: Doctor Table
 
 ```sql
   select * from Hr;
-+----------+------------------+-------------------------------------+----------+--------------------+
-| hr_id    | hr_email            | hr_password                      | hr_phone    | hr_user_name    |
-+----------+---------------------+----------------------------------+----------+--------------------+
-|        2 | viresh@admin.com    | A86BEFDE3786B3633D46A742FEF61721 | 1234567890  | VireshRathore   |
-|        3 | vaibhav22@admin.com | A86BEFDE3786B3633D46A742FEF61721 | 1234567880  | VaibhavSharma   |
-+----------+---------------------+----------------------------------+-------------+-----------------+
-```
-
-:arrow_right: AuthTokenEmployee Table
-
-```sql
- select * from auth_token_employee;
-+----------+-----------------------------------------------+------------------------------+----------------+
-| employee_token_id | employee_token                       | employee_token_creation_date | fk_employee_id |
-+-------------------+--------------------------------------+------------------------------+----------------+
-|                1  | c8a5b6e0-e167-45d4-b3a2-af73239ace38 | 2023-05-21                   | 1              |
-|                2  | b49a53d8-cc12-4007-83cc-df97358c5c25 | 2023-05-21                   | 2              |
-|                3  | f18b4dd1-aed4-4a41-b72a-a18347de3396 | 2023-05-21                   | 3              |
-+----------+--------------------------------------+---------------------+------------+----+----------------+
-```
-
-:arrow_right: AuthTokenHr Table
-
-```sql
-select * from auth_token_Hr;
-+----------------+--------------------------------------+---------------------------+----------------+
-| Hr_token_id    | Hr_token                             | Hr_token_creation_date    | fk_employee_id |
-+----------------+--------------------------------------+---------------------------+----------------+
-|              1 | 188bd41e-48d1-4e3c-9e05-6f3b0a8a66c5 | 2023-05-21                | 1              |
-+----------------+--------------------------------------+---------------------------+----------------+
++-----------+------------------------+---------------+------------------------+---------------+--------------------+
+| doctor_id | doctor_name            | city          | email                  | phone         |  specialization    |
++-----------+------------------------+---------------+------------------------+---------------+--------------------+
+|        2  | Dr Anushka Srivastava  | DELHI         | anushka23@gmailcom     | 1234567890    |  ORTHOPEDIC        |
+|        3  | Dr Vaibhav Shekhawat   | FARIDABAD     | vaibhav1234@gmail.com  | 1234567890    |  ENT               |
++-----------+------------------------+---------------+------------------------+------------------------------------+
 ```
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 ## :six: Project Summary
 ### :o: Generated API's
 
-:small_blue_diamond: SIGNUP Hr : http://localhost:8080/HrSignUp
+:small_blue_diamond: ADD Doctor : http://localhost:8080/Doctor
 
-:small_blue_diamond: SIGNIN Hr : https://localhost:8080/HrSignIn
+:small_blue_diamond: GET Doctor By Id : https://localhost:8080/Doctor/docId/appointment
 
-:small_blue_diamond: ADD Employee List In Hr : https://localhost:8080/storeEmployee/hrEmail/{hrEmail}
+:small_blue_diamond: SIGNUP Patient : https://localhost:8080/Patient/signUp
 
-:small_blue_diamond: SIGNUP Employee : https://localhost:8080/signUp/HrEmail/{HrEmail}
+:small_blue_diamond: SIGNIN Patient : https://localhost:8080/Patient/signIn
 
-:small_blue_diamond: SIGNIN Employee : https://localhost:8080/signIn
+:small_blue_diamond: GET All Doctors : https://localhost:8080/Patient/doctors
 
-:small_blue_diamond: GET Employee By Employee Email For Hr : https://localhost:8080/getEmployee/HrEmail/{hrEmail}/empEmail/{empEmail}
+:small_blue_diamond: DELETE Appointment : https://localhost:8080/Patient/appointment
 
-:small_blue_diamond: UPDATE Employee JobRole and Salary By Hr: https://localhost:8080/update/hrEmail/{hrEmail}/empEmail/{empEmail}
+:small_blue_diamond: GET Doctor By Symptom: https://localhost:8080/Patient/symptom
 
-:small_blue_diamond: UPDATE Password By Employee : https://localhost:8080/changePassword/{empEmail}
-
-:small_blue_diamond: DELETE Employee By Hr : https://localhost:8080/delete/hrEmail/{hrEmail}/{empEmail}
-
-:small_blue_diamond: DELETE SONG : https://localhost:8080/songDetails/delete/songId/{songId}/adminEmail/{adminEMail}
-
-:small_blue_diamond: ADD Reporting : https://localhost:8080/Rep/{empEmail}
-
-:small_blue_diamond: GET Performance REPORT BY Hr : https://localhost:8080/Rep/HrEmail/{hrEmail}/Employee/{empEmail}
+:small_blue_diamond: BOOK Appointment : https://localhost:8080/bookAppointment
 
 --------------------------------------------------------------------------------------------------------------------------------------------------
 
